@@ -19,7 +19,7 @@ fi
 echo "Backing up existing database $source_database"
 timestamp=$(date +%d%m%y%H%M%S)
 backup_file="~/migration/${source_database}-backup-${timestamp}.sql"
-mysqldump -u "$mysql_username" -p"$mysql_password" "$source_database" > "$backup_file"
+mysqldump -u "$mysql_username" -p"$mysql_password" "$source_database" > "$backup_file".sql
 
 # Step 4: Create my.cnf file if it doesn't exist
 mycnf_path=/etc/my.cnf
