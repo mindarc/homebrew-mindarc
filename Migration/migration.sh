@@ -49,7 +49,7 @@ fi
 # Step 5: Create MySQL user and grants if it doesn't already exist
 user_exists=$(mysql -u "$mysql_username" -p"$mysql_password" -e "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = 'migration_user' AND host = '%');" | awk '{print $2}')
 if [ "$user_exists" -eq 1 ]; then
-    echo "User 'migration_user' already exists. Skipping user creation."
+    echo "User 'migration_user' already exists. Skipping user creation. Please confirm that migration_user has correct rights on $source_database"
 else
     mysql -u "$mysql_username" -p"$mysql_password" <<MYSQL_SCRIPT
     CREATE USER 'migration_user'@'%' IDENTIFIED BY '$mysql_password';
