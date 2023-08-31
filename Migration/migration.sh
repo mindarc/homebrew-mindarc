@@ -22,22 +22,28 @@ backup_file="~/migration/${source_database}-backup-${timestamp}.sql"
 mysqldump -u "$mysql_username" -p"$mysql_password" "$source_database" > "$backup_file"
 
 # Step 4: Create my.cnf file if it doesn't exist
-mycnf_path=/etc/my.cnf
+mycnf_path="/etc/mysql/my.cnf"
+config_lines="[mysqld]
+bind-address=0.0.0.0
+log-bin=bin.log
+log-bin-index=bin-log.index
+max_binlog_size=100M
+binlog_format=row
+server-id=1
+log_bin=/var/log/mysql/mysql-bin.log
+expire_logs_days=3
+enforce-gtid-consistency=ON
+gtid-mode=ON
+"
 
 if [ -e "$mycnf_path" ]; then
-    echo "my.cnf already exists. Skipping config creation."
+    # Append the configuration lines to the end of the file
+    echo "$config_lines" | sudo tee -a "$mycnf_path" > /dev/null
+    echo "Appended to existing my.cnf file."
 else
-    # Create my.cnf file
-    sudo bash -c 'cat << EOF > /etc/my.cnf
-    [mysqld]
-    log-bin=bin.log
-    log-bin-index=bin-log.index
-    max_binlog_size=100M
-    binlog_format=row
-    server-id=1
-    log_bin=/var/log/mysql/mysql-bin.log
-    expire_logs_days=3
-    EOF'
+    # Create my.cnf file with the configuration lines
+    echo "$config_lines" | sudo tee "$mycnf_path" > /dev/null
+    echo "Created my.cnf file."
 fi
 
 # Step 5: Create MySQL user and grants if it doesn't already exist
@@ -107,3 +113,4 @@ echo "$sql_output" | while read -r sql_command; do
 done
 
 echo "MySQL migration setup and SQL commands executed for database: $source_database."
+
