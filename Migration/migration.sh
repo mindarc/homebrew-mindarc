@@ -49,8 +49,13 @@ fi
 # Step 5: Create MySQL user and grants if it doesn't already exist
 user_exists=$(mysql -u "$mysql_username" -p"$mysql_password" -e "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user = 'migration_user' AND host = '%');" | awk '{print $2}')
 if [ "$user_exists" -eq 1 ]; then
-    echo "User 'migration_user' already exists. Skipping user creation. Please confirm that migration_user has correct rights on $source_database"
+    echo "User 'migration_user' already exists. Adding additional permissions..."
+    mysql -u "$mysql_username" -p"$mysql_password" <<MYSQL_SCRIPT
+    GRANT SELECT, INSERT, UPDATE, DELETE, SHOW VIEW, LOCK TABLES ON \`${source_database}\`.* TO 'migration_user'@'%';
+    FLUSH PRIVILEGES;
+MYSQL_SCRIPT
 else
+    echo "Creating user 'migration_user'..."
     mysql -u "$mysql_username" -p"$mysql_password" <<MYSQL_SCRIPT
     CREATE USER 'migration_user'@'%' IDENTIFIED BY '$mysql_password';
     GRANT PROCESS, REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'migration_user'@'%';
@@ -58,8 +63,8 @@ else
     GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, ALTER ON \`_vt\`.* TO 'migration_user'@'%';
     FLUSH PRIVILEGES;
 MYSQL_SCRIPT
-fi
 
+fi
 # Step 6: Terminate script if tables without a primary key exist
 tables_without_primary_key=$(mysql -u "$mysql_username" -p"$mysql_password" -N -e "SELECT table_name
 FROM information_schema.tables
@@ -77,7 +82,7 @@ if [ -n "$tables_without_primary_key" ]; then
     exit 1  # Exit with an error code
 fi
 
-# Step 7: Set MySQL global variables for the source database, if GTID_MODE is not already ON
+# Step 7: Set MySQL global variables for the source database, if GTID_MODE is not already ON (Note - this should be already done by my.cnf)
 gtid_status=$(mysql -u "$mysql_username" -p"$mysql_password" -N -e "SHOW VARIABLES LIKE 'gtid_mode';" | awk '{print $2}')
 if [ "$gtid_status" != "ON" ]; then
     mysql -u "$mysql_username" -p"$mysql_password" <<MYSQL_SCRIPT
